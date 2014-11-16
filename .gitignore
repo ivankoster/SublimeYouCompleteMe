@@ -1,0 +1,9 @@
+#sublime project
+*.sublime-project
+*.sublime-workspace
+
+# Python
+*.py[cod]
+
+#ycmd module
+ycmd/

@@ -1,0 +1,4 @@
+[
+    {"keys": ["ctrl+t", "ctrl+t"], "command": "ycm_goto"},
+    {"keys": ["ctrl+t", "ctrl+b"], "command": "ycm_goto_history"}
+]

@@ -1,0 +1,6 @@
+[submodule "requests"]
+	path = requests
+	url = https://github.com/kennethreitz/requests
+#[submodule "ycmd"]
+#	path = ycmd
+#	url = https://github.com/Valloric/ycmd
