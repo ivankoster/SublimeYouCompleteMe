@@ -34,6 +34,13 @@ def get_unused_localhost_port():
     sock.close()
     return port
 
+def to_utf8_if_needed(obj):
+    if isinstance(obj, unicode):
+        return obj.encode("utf8")
+    if isinstance(obj, str):
+        return obj
+    return str(obj)
+
 def encode_unicode_to_utf8(data):
     """ Encode data to utf8. Also recurses into iterables and dicts and converts
     those contents also to utf8

@@ -192,3 +192,36 @@ class YCMDCommandRequest(YCMDRequest):
                                              response['filepath'], #to_utf8_if_needed
                                              response['line_num'],
                                              response['column_num'])
+
+
+class YCMDCompletionRequest(YCMDRequest):
+    """ Send a request for completions to YCMD """
+    def __init__(self):
+        super(YCMDCompletionRequest, self).__init__()
+
+    @staticmethod
+    def send(sublime_view, force_semantic=False):
+        """ Send a request for completions to YCMD and return a list of them
+        that sublime text understands.
+        Sublime wants a tuple ("show text", "insert text") for each completion.
+        """
+        request_data = YCMDRequest.build_request_data(view=sublime_view)
+        if force_semantic:
+            request_data["force_semantic"] = True
+        response = YCMDRequest.post_data_to_handler(request_data, 
+                                                    "completions")
+        if not response:
+            return []
+        
+        sublime_completions = []
+        f = utils.to_utf8_if_needed
+        for comp in response["completions"]:
+            if "extra_menu_info" in comp:
+                # We can show some extra info in the auto complete window
+                sublime_completions.append(\
+                    ("{0}\t{1}".format(f(comp['insertion_text']), 
+                                       f(comp['extra_menu_info'])),
+                     f(comp['insertion_text'])))
+            else:
+                sublime_completions.append((comp['insertion_text'],)*2)
+        return sublime_completions

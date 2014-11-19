@@ -38,7 +38,7 @@ import ycmd
 
 from plugin import utils, sublime_support
 from plugin.ycmd_request import YCMDRequest, YCMDEventNotification,\
-    YCMDCommandRequest
+    YCMDCommandRequest, YCMDCompletionRequest
 from plugin.ycmd_keepalive import YCMDKeepAlive
 
 
@@ -118,8 +118,11 @@ def unload_handler():
 
 class YCMEventListener(sublime_plugin.EventListener):
     """ Listener for events that Sublime Text sends us."""
-    # def on_query_completions(self, view, prefix, locations):
-    #     """ Gives completions to Sublime Text """
+    def on_query_completions(self, view, prefix, locations):
+        """ Gives completions to Sublime Text """
+        return (YCMDCompletionRequest.send(view),
+                sublime.INHIBIT_WORD_COMPLETIONS |
+                sublime.INHIBIT_EXPLICIT_COMPLETIONS)
     #     line, column = view.rowcol(locations[0])
     #     file_type = view.scope_name(locations[0]).split()[0][7:]
     #     print(file_type)
