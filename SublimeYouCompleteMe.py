@@ -31,6 +31,8 @@ import sublime, sublime_plugin
 
 DIR_OF_THIS_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "requests"))
+sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "requests-futures"))
+sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "pythonfutures"))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "ycmd"))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "ycmd", "third_party",
                              "frozendict"))
@@ -115,70 +117,64 @@ def unload_handler():
     """
     SERVER_WRAP.server_shutdown()
 
-
 class YCMEventListener(sublime_plugin.EventListener):
     """ Listener for events that Sublime Text sends us."""
+    def __init__(self):
+        self._file_parse_events = []
+        self._timer_running = False
+
     def on_query_completions(self, view, prefix, locations):
         """ Gives completions to Sublime Text """
         return (YCMDCompletionRequest.send(view),
                 sublime.INHIBIT_WORD_COMPLETIONS |
                 sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-    #     line, column = view.rowcol(locations[0])
-    #     file_type = view.scope_name(locations[0]).split()[0][7:]
-    #     print(file_type)
-    #     file_contents = view.substr(sublime.Region(0, view.size()))
-    #     completions = ycmd_server.request_code_completion(view.file_name(),
-    #                                                       file_type,
-    #                                                       file_contents,
-    #                                                       line+1,
-    #                                                       column+1)
-
-    #     return ([(completion,completion) for completion in completions], 
-    #             sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
     def on_load(self, view):
         """ Notify ycmd to parse the loaded file """
         if not view:
             # This seems to happen with empty files in sublime
             return
-        try:
-            diagnostics = YCMDEventNotification.send("FileReadyToParse",
-                                                     sublime_view=view)
-            self.show_ycmd_diagnostics(view, diagnostics)
-        except ycmd.responses.UnknownExtraConf as error:
-            #TODO: move thes deeper in the plugin?
-            if sublime.ok_cancel_dialog("Do you want to load {0}?".format(
-                    error.extra_conf_file)):
-                YCMDEventNotification.load_extra_conf_file(
-                    error.extra_conf_file)
-                diagnostics = YCMDEventNotification.send("FileReadyToParse", 
-                                                         sublime_view=view)
-                self.show_ycmd_diagnostics(view, diagnostics)
-            else:
-                YCMDEventNotification.ignore_extra_conf_file(
-                    error.extra_conf_file)
 
-    def show_ycmd_diagnostics(self, view, diagnostics):
-        """ Shows the diagnostics for the file in the current view"""
-        if not diagnostics:
-            return
-        regions = []
-        for diag in diagnostics:
-            if diag["location"]["filepath"] == view.file_name():
-                line_num = diag["location"]["line_num"]
-                col_num = diag["location"]["column_num"]
-                point = view.text_point(line_num-1, col_num-1)
-                print(point)
-                print(sublime.Region(point, point))
-                print(view.line(point))
-                print(sublime.Region(point, point).cover(
-                    view.line(point)))
-                print("-----")
-                regions.append(view.word(point+1))
+        event = YCMDEventNotification("FileReadyToParse", sublime_view=view)
+        self._file_parse_events.append(event)
+        if not self._timer_running:
+            self.handle_file_parse_events()
 
-        if regions:
-            view.add_regions("ycm.diags", regions, "invalid", "dot")
-            #{u'ranges': [], u'text': u"'global_metainfo.h' file not found", u'kind': u'ERROR', u'location': {u'line_num': 30, u'column_num': 10, u'filepath': u'C:\\vx_tree\\modules\\gen_platform\\global\\src\\glb_mn.c'}, u'location_extent': {u'start': {u'line_num': 0, u'column_num': 0, u'filepath': u''}, u'end': {u'line_num': 0, u'column_num': 0, u'filepath': u''}}}
+    def handle_file_parse_events(self):
+        """ Test all async file parse events if they are done, if so display the
+        diagnostics YCMD returns.
+        Sets a timer to periodically check on remaining events.
+        """
+        # TODO: rework/refactor so that the future calls sublime.set_timeout()
+        # with a 0 timeout on completion to call show_ycmd_diagnostics() in the
+        # main thread. This avoids the unfashionable code below.
+        self._timer_running = False
+
+        for event in list(self._file_parse_events):
+            if event.is_done():
+                self._file_parse_events.remove(event)
+                try:
+                    diagnostics = event.get_response()
+                    sublime_support.show_ycmd_diagnostics(\
+                        event.get_sublime_view(), diagnostics)
+                except Exception as error:
+                    self.schedule_file_parse_handler()
+                    # the remaining events will be handled later
+                    raise error
+
+        self.schedule_file_parse_handler()
+
+    def schedule_file_parse_handler(self):
+        """ Sets a timer in sublime text to periodically handle the file parse
+        events. Removes timer if all are handled.
+        """
+        if self._file_parse_events:
+            if not self._timer_running:
+                # Make sure we don't accidently create 2 timer threads
+                self._timer_running = True
+                sublime.set_timeout(self.handle_file_parse_events, 100)
+        else:
+            self._timer_running = False
 
 
 class YcmGotoCommand(sublime_plugin.TextCommand):

@@ -22,6 +22,7 @@ import hmac
 import hashlib
 
 import requests
+from requests_futures.sessions import FuturesSession
 import sublime
 from ycmd import responses
 
@@ -44,6 +45,7 @@ class YCMDRequest(object):
 
     server_base_URI = ""
     shared_hmac_secret = ""
+    session = FuturesSession(max_workers=30)
 
     def __init__(self):
         pass
@@ -51,30 +53,38 @@ class YCMDRequest(object):
     @staticmethod
     def get_data_from_handler(handler):
         """ GET data from the YCMD server """
-        return YCMDRequest.json_from_response(\
-                    YCMDRequest._talk_to_handler("", handler, "GET"))
+        return YCMDRequest.json_from_future(\
+                    YCMDRequest._talk_to_handler_async("", handler, "GET"))
 
     @staticmethod
     def post_data_to_handler(data, handler):
         """ POST data to the YCMD server """
-        return YCMDRequest.json_from_response(\
-                    YCMDRequest._talk_to_handler(data, handler, "POST"))
+        return YCMDRequest.json_from_future(\
+                    YCMDRequest._talk_to_handler_async(data, handler, "POST"))
 
     @staticmethod
-    def _talk_to_handler(data, handler, http_method):
+    def post_data_to_handler_async(data, handler):
+        """ POST data to the YCMD server. Returns a requests-future """
+        return YCMDRequest._talk_to_handler_async(data, handler, "POST")
+
+    @staticmethod
+    def _talk_to_handler_async(data, handler, http_method):
         """ Internal method that actually communicates with the YCMD server in
-        blocking fashion.
+        async fashion.
+        Returns a requests-future.
         """
         if http_method == "POST":
             json_data = utils.to_utf8_json(data)
-            return requests.post(YCMDRequest._build_uri(handler),
-                                 data=json_data,
-                                 headers=YCMDRequest.\
-                                    _generate_http_headers(json_data))
+            return YCMDRequest.session.post(YCMDRequest._build_uri(handler),
+                                            data=json_data,
+                                            headers=YCMDRequest.\
+                                            _generate_http_headers(json_data),
+                                            timeout=30)
         if http_method == "GET":
-            return requests.get(YCMDRequest._build_uri(handler),
-                                headers=YCMDRequest.\
-                                    _generate_http_headers())
+            return YCMDRequest.session.get(YCMDRequest._build_uri(handler),
+                                           headers=YCMDRequest.\
+                                           _generate_http_headers(),
+                                           timeout=30)
 
     @staticmethod
     def _generate_http_headers(request_body=""):
@@ -113,19 +123,24 @@ class YCMDRequest(object):
         return request_data
 
     @staticmethod
-    def json_from_response(request):
-        """ Retrieve the json from a response from the YMCD server.
+    def json_from_future(future):
+        """ Retrieve the json from a requests-future from the YMCD server. """
+        return YCMDRequest.json_from_response(future.result())
+
+    @staticmethod
+    def json_from_response(response):
+        """ Retrieve the json from a requests-response from the YMCD server.
         Throws exceptions if there are communication errors or the received
         HMAC is invalid
         """
         # TODO: validate the hmac from the response
-        if request.status_code == requests.codes.server_error:
-            YCMDRequest.raise_exception_for_json_data(request.json())
+        if response.status_code == requests.codes.server_error:
+            YCMDRequest.raise_exception_for_json_data(response.json())
 
-        request.raise_for_status()
+        response.raise_for_status()
 
-        if request.content:
-            return request.json()
+        if response.content:
+            return response.json()
         return None
 
     @staticmethod
@@ -142,16 +157,42 @@ class YCMDRequest(object):
 
 class YCMDEventNotification(YCMDRequest):
     """ Send event notifications to the YCMD server """
-    def __init__(self):
+    def __init__(self, event_name, sublime_view=None):
         super(YCMDEventNotification, self).__init__()
+        self._event_name = event_name
+        self._sublime_view = sublime_view
 
-    @staticmethod
-    def send(event_name, sublime_view=None):
-        """ Sends an event notification and returns the json response """
         request_data = YCMDRequest.build_request_data(view=sublime_view)
-        request_data["event_name"] = event_name
-        return YCMDRequest.post_data_to_handler(request_data, 
-                                                "event_notification")
+        request_data["event_name"] = self._event_name
+
+        self._future = YCMDRequest.post_data_to_handler_async(
+                            request_data, "event_notification")
+
+    def is_done(self):
+        """ Check if the requests future has finished running. """
+        return self._future.done()
+
+    def get_response(self):
+        """ Get json response from YCMD. """
+        if self._event_name != "FileReadyToParse":
+            return # These events have no response from YCMD
+
+        try:
+            return YCMDRequest.json_from_future(self._future)
+        except responses.UnknownExtraConf as error:
+            if sublime.ok_cancel_dialog("Do you want to load {0}?".format(
+                    error.extra_conf_file)):
+                YCMDEventNotification.load_extra_conf_file(
+                    error.extra_conf_file) #This is a blocking call
+                # Maybe parse the file again, because YCMD does not do it?
+            else:
+                YCMDEventNotification.ignore_extra_conf_file(
+                    error.extra_conf_file)
+            return []
+
+    def get_sublime_view(self):
+        """ Get the sublime view given on construction of this instance. """
+        return self._sublime_view
 
     @staticmethod
     def load_extra_conf_file(filepath):

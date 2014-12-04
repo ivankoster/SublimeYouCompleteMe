@@ -35,6 +35,7 @@ def jump_to_location(view, target_file, target_line, target_column):
                                                  target_column), 
                             sublime.ENCODED_POSITION)
 
+
 def jump_back(view):
     """ Jump back in history, stored by jump_to_location() """
     try:
@@ -42,3 +43,19 @@ def jump_back(view):
                                 sublime.ENCODED_POSITION)
     except IndexError:
         pass
+
+
+def show_ycmd_diagnostics(view, diagnostics):
+    """ Shows the diagnostics for the file in the given view"""
+    if not diagnostics:
+        return
+    regions = []
+    for diag in diagnostics:
+        if diag["location"]["filepath"] == view.file_name():
+            line_num = diag["location"]["line_num"]
+            col_num = diag["location"]["column_num"]
+            point = view.text_point(line_num-1, col_num-1)
+            regions.append(view.word(point+1))
+
+    if regions:
+        view.add_regions("ycm.diags", regions, "invalid", "dot")

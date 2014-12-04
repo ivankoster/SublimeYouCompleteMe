@@ -4,3 +4,6 @@
 #[submodule "ycmd"]
 #	path = ycmd
 #	url = https://github.com/Valloric/ycmd
+[submodule "requests-futures"]
+	path = requests-futures
+	url = https://github.com/ross/requests-futures
