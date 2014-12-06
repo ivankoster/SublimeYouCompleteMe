@@ -1,4 +1,5 @@
 [
     {"keys": ["ctrl+t", "ctrl+t"], "command": "ycm_goto"},
-    {"keys": ["ctrl+t", "ctrl+b"], "command": "ycm_goto_history"}
+    {"keys": ["ctrl+t", "ctrl+b"], "command": "ycm_goto_history"},
+    {"keys": ["ctrl+space"], "command": "ycm_auto_complete" }
 ]

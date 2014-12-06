@@ -172,7 +172,6 @@ class YCMDEventNotification(YCMDRequest):
         request_data["event_name"] = self._event_name
 
         def on_complete(session, response):
-            print("Future came back!")
             if self._event_name != "FileReadyToParse":
                 return # These events have no response from YCMD
             sublime.set_timeout(lambda: self.handle_FileReadyToParse_response(\

@@ -45,6 +45,7 @@ from plugin.ycmd_keepalive import YCMDKeepAlive
 
 
 SERVER_IDLE_SUICIDE_SECONDS = 300
+FORCE_NEXT_COMPLETION_SEMANTIC = False
 
 class SublimeYouCompleteMe(object):
     """ A wrapper for the YCMD server """
@@ -125,9 +126,13 @@ class YCMEventListener(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         """ Gives completions to Sublime Text """
-        return (YCMDCompletionRequest.send(view),
-                sublime.INHIBIT_WORD_COMPLETIONS |
-                sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        global FORCE_NEXT_COMPLETION_SEMANTIC
+        ret = (YCMDCompletionRequest.send(view,
+                    force_semantic=FORCE_NEXT_COMPLETION_SEMANTIC),
+               sublime.INHIBIT_WORD_COMPLETIONS |
+               sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        FORCE_NEXT_COMPLETION_SEMANTIC = False
+        return ret
 
     def on_load(self, view):
         """ Notify ycmd to parse the loaded file """
@@ -152,3 +157,15 @@ class YcmGotoCommand(sublime_plugin.TextCommand):
 class YcmGotoHistoryCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         sublime_support.jump_back(self.view)
+
+
+class YcmAutoCompleteCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        """ Perform a normal sublime text auto_complete, but force YCMD to do
+        a semantic completion.
+        """
+        global FORCE_NEXT_COMPLETION_SEMANTIC
+        FORCE_NEXT_COMPLETION_SEMANTIC = True
+        self.view.run_command("hide_auto_complete")
+        sublime.set_timeout(lambda: self.view.run_command("auto_complete", {}),
+                            0)
