@@ -47,6 +47,7 @@ def jump_back(view):
 
 def show_ycmd_diagnostics(view, diagnostics):
     """ Shows the diagnostics for the file in the given view"""
+    view.erase_regions("ycm.diags")
     if not diagnostics:
         return
     regions = []
@@ -59,3 +60,11 @@ def show_ycmd_diagnostics(view, diagnostics):
 
     if regions:
         view.add_regions("ycm.diags", regions, "invalid", "dot")
+
+
+def find_view_by_buffer_id(buffer_id):
+    """ Returns the first sublime view found with a given buffer_id """
+    for window in sublime.windows():
+        for view in window.views():
+            if view.buffer_id() == buffer_id:
+                return view

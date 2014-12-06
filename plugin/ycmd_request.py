@@ -63,12 +63,15 @@ class YCMDRequest(object):
                     YCMDRequest._talk_to_handler_async(data, handler, "POST"))
 
     @staticmethod
-    def post_data_to_handler_async(data, handler):
-        """ POST data to the YCMD server. Returns a requests-future """
-        return YCMDRequest._talk_to_handler_async(data, handler, "POST")
+    def post_data_to_handler_async(data, handler, finished_cb=None):
+        """ POST data to the YCMD server. Returns a requests-future.
+        Optionally provide a callback that is called when the future completes.
+        """
+        return YCMDRequest._talk_to_handler_async(data, handler, "POST",
+                                                  finished_cb)
 
     @staticmethod
-    def _talk_to_handler_async(data, handler, http_method):
+    def _talk_to_handler_async(data, handler, http_method, finished_cb=None):
         """ Internal method that actually communicates with the YCMD server in
         async fashion.
         Returns a requests-future.
@@ -79,12 +82,14 @@ class YCMDRequest(object):
                                             data=json_data,
                                             headers=YCMDRequest.\
                                             _generate_http_headers(json_data),
-                                            timeout=30)
+                                            timeout=30,
+                                            background_callback=finished_cb)
         if http_method == "GET":
             return YCMDRequest.session.get(YCMDRequest._build_uri(handler),
                                            headers=YCMDRequest.\
                                            _generate_http_headers(),
-                                           timeout=30)
+                                           timeout=30,
+                                           background_callback=finished_cb)
 
     @staticmethod
     def _generate_http_headers(request_body=""):
@@ -160,39 +165,53 @@ class YCMDEventNotification(YCMDRequest):
     def __init__(self, event_name, sublime_view=None):
         super(YCMDEventNotification, self).__init__()
         self._event_name = event_name
-        self._sublime_view = sublime_view
+        if sublime_view:
+            self._sublime_buffer_id = sublime_view.buffer_id()
 
         request_data = YCMDRequest.build_request_data(view=sublime_view)
         request_data["event_name"] = self._event_name
 
+        def on_complete(session, response):
+            print("Future came back!")
+            if self._event_name != "FileReadyToParse":
+                return # These events have no response from YCMD
+            sublime.set_timeout(lambda: self.handle_FileReadyToParse_response(\
+                                    response),
+                                0)
+
         self._future = YCMDRequest.post_data_to_handler_async(
-                            request_data, "event_notification")
+                            request_data, "event_notification",
+                            finished_cb=on_complete)
 
-    def is_done(self):
-        """ Check if the requests future has finished running. """
-        return self._future.done()
+    def handle_FileReadyToParse_response(self, response):
+        """ Display the diagnostics returned by YCMD. """
+        view = sublime_support.find_view_by_buffer_id(self._sublime_buffer_id)
+        if view:
+            sublime_support.show_ycmd_diagnostics(view,
+                self.get_diagnostics(response))
 
-    def get_response(self):
-        """ Get json response from YCMD. """
-        if self._event_name != "FileReadyToParse":
-            return # These events have no response from YCMD
-
+    def get_diagnostics(self, response):
+        """ Get diagnostics in the json from response from YCMD.
+        This function raises the exceptions that YCMD may have or resulted from
+        the requests future.
+        The dialog if YCMD wants to load an .ycm_extra_conf.py file is also
+        handled here.
+        """
         try:
-            return YCMDRequest.json_from_future(self._future)
+            return YCMDRequest.json_from_response(response)
         except responses.UnknownExtraConf as error:
             if sublime.ok_cancel_dialog("Do you want to load {0}?".format(
                     error.extra_conf_file)):
                 YCMDEventNotification.load_extra_conf_file(
                     error.extra_conf_file) #This is a blocking call
-                # Maybe parse the file again, because YCMD does not do it?
+                # Parse the file again, because YCMD does not do it.
+                view = sublime_support.find_view_by_buffer_id(
+                    self._sublime_buffer_id)
+                YCMDEventNotification("FileReadyToParse", sublime_view=view)
             else:
                 YCMDEventNotification.ignore_extra_conf_file(
                     error.extra_conf_file)
             return []
-
-    def get_sublime_view(self):
-        """ Get the sublime view given on construction of this instance. """
-        return self._sublime_view
 
     @staticmethod
     def load_extra_conf_file(filepath):

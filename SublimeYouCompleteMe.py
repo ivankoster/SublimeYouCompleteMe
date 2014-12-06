@@ -131,50 +131,17 @@ class YCMEventListener(sublime_plugin.EventListener):
 
     def on_load(self, view):
         """ Notify ycmd to parse the loaded file """
-        if not view:
-            # This seems to happen with empty files in sublime
+        if not view or not view.file_name():
             return
 
-        event = YCMDEventNotification("FileReadyToParse", sublime_view=view)
-        self._file_parse_events.append(event)
-        if not self._timer_running:
-            self.handle_file_parse_events()
+        YCMDEventNotification("FileReadyToParse", sublime_view=view)
 
-    def handle_file_parse_events(self):
-        """ Test all async file parse events if they are done, if so display the
-        diagnostics YCMD returns.
-        Sets a timer to periodically check on remaining events.
-        """
-        # TODO: rework/refactor so that the future calls sublime.set_timeout()
-        # with a 0 timeout on completion to call show_ycmd_diagnostics() in the
-        # main thread. This avoids the unfashionable code below.
-        self._timer_running = False
-
-        for event in list(self._file_parse_events):
-            if event.is_done():
-                self._file_parse_events.remove(event)
-                try:
-                    diagnostics = event.get_response()
-                    sublime_support.show_ycmd_diagnostics(\
-                        event.get_sublime_view(), diagnostics)
-                except Exception as error:
-                    self.schedule_file_parse_handler()
-                    # the remaining events will be handled later
-                    raise error
-
-        self.schedule_file_parse_handler()
-
-    def schedule_file_parse_handler(self):
-        """ Sets a timer in sublime text to periodically handle the file parse
-        events. Removes timer if all are handled.
-        """
-        if self._file_parse_events:
-            if not self._timer_running:
-                # Make sure we don't accidently create 2 timer threads
-                self._timer_running = True
-                sublime.set_timeout(self.handle_file_parse_events, 100)
-        else:
-            self._timer_running = False
+    def on_modified(self, view):
+        """ Called when a buffer is modified. We let YCMD reparse the file """
+        if not view or not view.file_name():
+            return
+        # Note: Maybe we have to add a delay for fast typists with slow cpu's?
+        YCMDEventNotification("FileReadyToParse", sublime_view=view)
 
 
 class YcmGotoCommand(sublime_plugin.TextCommand):
