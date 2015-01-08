@@ -18,11 +18,18 @@ Current features
 
 Installation for 64bit windows
 -------------------------
-1. Clone this repository into your sublime text 2 packages folder.
-2. Use git submodule init to initialize dependencies
-3. Now you need YCMD. YCMD is rather annoying to build on windows, but Haroogan has downloadable binaries that we can use.
-4. Download the package from [vim YCM for windows from Haroogan](https://bitbucket.org/Haroogan/vim-youcompleteme-for-windows).
-5. Copy the third_party/ycmd/ folder in the above package to your <sublime_packages>/SublimeYouCompleteMe/ycmd folder.
-6. Last but not least you need libclang.dll. Again I got it from [llvm - Haroogan](https://bitbucket.org/Haroogan/llvm-for-windows). Make sure to get the x64 version.
-7. Copy the libclang.dll from the above package to <sublime_packages>/SublimeYouCompleteMe/ycmd/libclang.dll.
-8. Start Sublime Text 2. It should now work!
+1.  Clone this repository into your sublime text 2 packages folder.
+
+        cd C:\Users\<yourname>\appdata\Roaming\Sublime Text 2\Packages
+        git clone https://github.com/ivankoster/SublimeYouCompleteMe
+
+2.  Use git submodule to download some dependencies
+
+        git submodule update --init
+
+3.  Now you need YCMD. YCMD is rather annoying to build on windows, but Haroogan has downloadable binaries that we can use.
+4.  Download the package from [vim YCM for windows from Haroogan](https://bitbucket.org/Haroogan/vim-youcompleteme-for-windows).
+5.  Copy the third_party/ycmd/ folder in the above package to your <sublime_packages>/SublimeYouCompleteMe/ycmd folder.
+6.  Last but not least you need libclang.dll. Again I got it from [llvm - Haroogan](https://bitbucket.org/Haroogan/llvm-for-windows). Make sure to get the x64 version.
+7.  Copy the libclang.dll from the above package to <sublime_packages>/SublimeYouCompleteMe/ycmd/libclang.dll.
+8.  Start Sublime Text 2. It should now work!
