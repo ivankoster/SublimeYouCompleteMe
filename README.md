@@ -14,7 +14,7 @@ Current features
 * ycm_goto command (ctrl+t, ctrl+t) - Jump to the declaration/definition of the symbol under the first cursor.
 * ycm_goto_history command (ctrl+t, ctrl+b) - Jump to the location before ycm_goto
 * ycm_auto_complete command (ctrl+space) - Force semantic autocomplete list to pop up. YCMD can also decide on it's own to use semantic autocomplete. For example when typing "." or "->" in the C-family languages.
-* Highlights diagnostics (compiler errors) that YCMD reports when loading or modifying a file. This only works for the C-family of languages.
+* Highlights diagnostics (compiler errors) that YCMD reports when loading or modifying a file. When a highlighted piece of code is selected, the detailed error text is shown in the statusbar. This only works for the C-family of languages.
 
 Installation for 64bit windows
 -------------------------
