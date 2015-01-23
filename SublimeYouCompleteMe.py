@@ -148,6 +148,13 @@ class YCMEventListener(sublime_plugin.EventListener):
         # Note: Maybe we have to add a delay for fast typists with slow cpu's?
         YCMDEventNotification("FileReadyToParse", sublime_view=view)
 
+    def on_selection_modified(self, view):
+        sublime_support.update_statusbar(view)
+
+    def on_close(self, view):
+        """ Called when a view is closed """
+        sublime_support.clear_view_from_diagnostics_store(view)
+
 
 class YcmGotoCommand(sublime_plugin.TextCommand):
     def run(self, edit):

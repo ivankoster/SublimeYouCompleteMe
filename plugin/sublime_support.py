@@ -16,11 +16,13 @@
 # along with SublimeYouCompleteMe.  If not, see <http://www.gnu.org/licenses/>.
 
 """ This module contains functions to perform actions in sublime text """
-from collections import deque
+from collections import deque, defaultdict
 
 import sublime
 
 GOTO_HISTORY = deque([], 50)
+DIAGNOSTICS_STORE = defaultdict(dict)
+
 
 def jump_to_location(view, target_file, target_line, target_column):
     """ Jump to the given location, while storing the current location for
@@ -48,18 +50,53 @@ def jump_back(view):
 def show_ycmd_diagnostics(view, diagnostics):
     """ Shows the diagnostics for the file in the given view"""
     view.erase_regions("ycm.diags")
+    global DIAGNOSTICS_STORE
+    try:
+        del DIAGNOSTICS_STORE[view.id()]
+    except KeyError:
+        pass
+
     if not diagnostics:
         return
     regions = []
+
     for diag in diagnostics:
         if diag["location"]["filepath"] == view.file_name():
             line_num = diag["location"]["line_num"]
             col_num = diag["location"]["column_num"]
             point = view.text_point(line_num-1, col_num-1)
-            regions.append(view.word(point+1))
+            word = view.word(point+1)
+            regions.append(word)
+
+            DIAGNOSTICS_STORE[view.id()][(word.a, word.b)] = \
+                "{0}: {1}".format(diag["kind"], diag["text"])
 
     if regions:
         view.add_regions("ycm.diags", regions, "invalid", "dot")
+
+
+def update_statusbar(view):
+    """ Shows diagnostics text in status bar of the selected diagnostic. """
+    view.erase_status("ycm-diags")
+    diags = DIAGNOSTICS_STORE.get(view.id(), None)
+    if not diags:
+        return
+    cursor_position = view.sel()[0].begin()
+    line, column = view.rowcol(cursor_position)
+    word = view.word(view.text_point(line, column))
+
+    text = diags.get((word.a, word.b), None)
+    if text:
+        view.set_status("ycm-diags", text)
+
+
+def clear_view_from_diagnostics_store(view):
+    """ Remove a view from the diagnostics store """
+    global DIAGNOSTICS_STORE
+    try:
+        del DIAGNOSTICS_STORE[view.id()]
+    except KeyError:
+        pass
 
 
 def find_view_by_buffer_id(buffer_id):
