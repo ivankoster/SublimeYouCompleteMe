@@ -114,7 +114,9 @@ class YCMDRequest(object):
         cursor_position = view.sel()[0].begin()
         line, column = view.rowcol(cursor_position)
         file_path = view.file_name()
-        file_type = view.scope_name(cursor_position).split()[0][7:]
+        file_type = sublime_support.map_filetype_sublime_to_ycmd(
+                        view.scope_name(cursor_position).split()[0][7:])
+
         file_contents = view.substr(sublime.Region(0, view.size()))
         request_data = {"line_num": line + 1,
                         "column_num": column + 1,

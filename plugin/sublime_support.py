@@ -105,3 +105,12 @@ def find_view_by_buffer_id(buffer_id):
         for view in window.views():
             if view.buffer_id() == buffer_id:
                 return view
+
+def map_filetype_sublime_to_ycmd(filetype):
+    """ Maps a filetype that sublime reports (scope name) to a filetype that
+    YCMD knows. """
+    mapper = {"c++": "cpp"}
+    try:
+        return mapper[filetype]
+    except KeyError:
+        return filetype
