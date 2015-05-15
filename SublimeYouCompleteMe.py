@@ -32,16 +32,14 @@ import sublime, sublime_plugin
 DIR_OF_THIS_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "requests"))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "requests-futures"))
-sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "pythonfutures"))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "ycmd"))
 sys.path.append(os.path.join(DIR_OF_THIS_SCRIPT, "ycmd", "third_party",
                              "frozendict"))
-import ycmd
 
-from plugin import utils, sublime_support
-from plugin.ycmd_request import YCMDRequest, YCMDEventNotification,\
-    YCMDCommandRequest, YCMDCompletionRequest
-from plugin.ycmd_keepalive import YCMDKeepAlive
+from SublimeYouCompleteMe.plugin import utils, sublime_support
+from SublimeYouCompleteMe.plugin.ycmd_request import YCMDRequest, \
+     YCMDEventNotification, YCMDCommandRequest, YCMDCompletionRequest
+from SublimeYouCompleteMe.plugin.ycmd_keepalive import YCMDKeepAlive
 
 
 SERVER_IDLE_SUICIDE_SECONDS = 300
@@ -59,11 +57,12 @@ class SublimeYouCompleteMe(object):
     def _setup_server(self):
         """ Start the YCMD server """
         port = utils.get_unused_localhost_port()
-        with tempfile.NamedTemporaryFile(delete=False) as options_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as options_file:
             # This file is deleted by YCMD when it starts
             hmac_secret = os.urandom(16)
             options_dict = self._user_options.copy()
-            options_dict["hmac_secret"] = base64.b64encode(hmac_secret)
+            options_dict["hmac_secret"] = base64.b64encode(hmac_secret).\
+                decode(encoding="utf-8")
             json.dump(options_dict, options_file)
             options_file.flush()
 
@@ -91,7 +90,8 @@ class SublimeYouCompleteMe(object):
 
         self._server_popen = subprocess.Popen(command,
                                               stdout=None, # subprocess.PIPE
-                                              stderr=None) # subprocess.PIPE
+                                              stderr=None, # subprocess.PIPE
+                                              cwd=DIR_OF_THIS_SCRIPT)
         YCMDRequest.server_base_URI = "http://127.0.0.1:{0}".format(port)
         YCMDRequest.shared_hmac_secret = hmac_secret
 

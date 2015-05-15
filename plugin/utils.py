@@ -35,8 +35,8 @@ def get_unused_localhost_port():
     return port
 
 def to_utf8_if_needed(obj):
-    if isinstance(obj, unicode):
-        return obj.encode("utf8")
+    if isinstance(obj, bytes):
+        return obj.encode("utf-8")
     if isinstance(obj, str):
         return obj
     return str(obj)
@@ -45,12 +45,12 @@ def encode_unicode_to_utf8(data):
     """ Encode data to utf8. Also recurses into iterables and dicts and converts
     those contents also to utf8
     """
-    if isinstance(data, unicode):
-        return data.encode("utf8")
+    if isinstance(data, bytes):
+        return data.encode("utf-8")
     if isinstance(data, str):
         return data
     elif isinstance(data, collections.Mapping):
-        return dict(map(encode_unicode_to_utf8, data.iteritems()))
+        return dict(map(encode_unicode_to_utf8, data.items()))
     elif isinstance(data, collections.Iterable):
         return type(data)(map(encode_unicode_to_utf8, data))
     else:
@@ -60,8 +60,7 @@ def encode_unicode_to_utf8(data):
 def to_utf8_json(data):
     """ Converts data to utf8 recursively and then converts it to json """
     return json.dumps(encode_unicode_to_utf8(data),
-                      ensure_ascii=False,
-                      encoding="utf-8")
+                      ensure_ascii=False)
 
 def on_windows():
     """ Are we on windows? """

@@ -18,13 +18,13 @@
 """ See the YCMDKeepAlive class """
 import threading
 
-from plugin.ycmd_request import YCMDRequest
+from SublimeYouCompleteMe.plugin.ycmd_request import YCMDRequest
 
 class YCMDKeepAlive(threading.Thread):
     """ Keep the YCMD server alive by pinging it with a message every once in
     a while.
     """
-    def __init__(self, ping_interval_seconds=60*5):
+    def __init__(self, ping_interval_seconds=60):
         super(YCMDKeepAlive, self).__init__()
         self._ping_interval_seconds = ping_interval_seconds
         self._stop_event = threading.Event()
@@ -32,9 +32,10 @@ class YCMDKeepAlive(threading.Thread):
 
     def run(self):
         """ Start running this thread """
+        print("Started YCMD keepalive thread")
         while not self._stop_event.is_set():
             try:
-                print YCMDRequest.get_data_from_handler("healthy")
+                print(YCMDRequest.get_data_from_handler("healthy"))
             except:
                 pass # If the server is down / can't be reached we do nothing
 

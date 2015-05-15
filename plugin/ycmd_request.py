@@ -16,7 +16,7 @@
 # along with SublimeYouCompleteMe.  If not, see <http://www.gnu.org/licenses/>.
 
 """ See the YCMDRequest class """
-import urlparse
+import urllib.parse
 import base64
 import hmac
 import hashlib
@@ -26,8 +26,7 @@ from requests_futures.sessions import FuturesSession
 import sublime
 from ycmd import responses
 
-import utils
-import sublime_support
+from SublimeYouCompleteMe.plugin import utils, sublime_support
 
 class YCMDRequest(object):
     """ Wrapper class to send requests to the YCMD server. 
@@ -94,9 +93,10 @@ class YCMDRequest(object):
     @staticmethod
     def _generate_http_headers(request_body=""):
         """ Generate a dict of HTTP headers the YCMD server wants. """
-        _hmac = base64.b64encode(hmac.new(YCMDRequest.shared_hmac_secret,
-                                          msg=request_body,
-                                          digestmod=hashlib.sha256).hexdigest())
+        digest = hmac.new(YCMDRequest.shared_hmac_secret,
+                          msg=request_body.encode("utf-8"),
+                          digestmod=hashlib.sha256).hexdigest()
+        _hmac = base64.b64encode(digest.encode("utf-8"))
         headers = {"content-type": "application/json",
                    "x-ycm-hmac": _hmac}
         return headers
@@ -104,7 +104,7 @@ class YCMDRequest(object):
     @staticmethod
     def _build_uri(handler):
         """ Build an URI for a handler on the YCMD server """
-        return urlparse.urljoin(YCMDRequest.server_base_URI, handler)
+        return urllib.parse.urljoin(YCMDRequest.server_base_URI, handler)
 
     @staticmethod
     def build_request_data(include_buffer_data=True, view=None):
