@@ -50,6 +50,7 @@ def jump_back(view):
 def show_ycmd_diagnostics(view, diagnostics):
     """ Shows the diagnostics for the file in the given view"""
     view.erase_regions("ycm.diags")
+    view.hide_popup()
     global DIAGNOSTICS_STORE
     try:
         del DIAGNOSTICS_STORE[view.id()]
@@ -84,10 +85,17 @@ def update_statusbar(view):
     cursor_position = view.sel()[0].begin()
     line, column = view.rowcol(cursor_position)
     word = view.word(view.text_point(line, column))
+    # Sometimes a diagnostic text appears at the end of a line and is reported 
+    # on the next line. word2 is a second attempt to to select it.
+    word2 = view.word(view.text_point(line, column+1))
+    word2_spans_multi_lines = len(view.lines(word2)) == 2
 
     text = diags.get((word.a, word.b), None)
+    if not text and word2_spans_multi_lines:
+        text = diags.get((word2.a, word2.b), None)
     if text:
         view.set_status("ycm-diags", text)
+        view.show_popup(text, sublime.COOPERATE_WITH_AUTO_COMPLETE)
 
 
 def clear_view_from_diagnostics_store(view):

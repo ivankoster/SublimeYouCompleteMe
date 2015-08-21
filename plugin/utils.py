@@ -21,6 +21,7 @@ import json
 import sys
 import os
 import socket
+from threading import Thread, Event
 
 from . import settings
 
@@ -116,3 +117,61 @@ def find_executable(executable, path=None):
         return None
     else:
         return executable
+
+
+def TimerReset(*args, **kwargs):
+    """Factory function to create a resettable Timer object.
+
+    Timers call a function after a specified number of seconds:
+
+        t = TimerReset(30.0, f, args=[], kwargs={})
+        t.start()
+        t.cancel()     # stop the timer's action if it's still waiting
+
+    """
+    return _TimerReset(*args, **kwargs)
+
+
+class _TimerReset(Thread):
+    """Call a function after a specified number of seconds:
+
+            t = TimerReset(30.0, f, args=[], kwargs={})
+            t.start()
+            t.cancel()     # stop the timer's action if it's still waiting
+        The timer (while it is running) can be reset with t.reset()
+    """
+
+    def __init__(self, interval, function, args=[], kwargs={}):
+        Thread.__init__(self)
+        self.interval = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.finished = Event()
+        self.must_wait = True
+
+    def cancel(self):
+        """Stop the timer if it hasn't finished yet"""
+        self.finished.set()
+
+    def run(self):
+        while self.must_wait:
+            self.must_wait = False
+            self.finished.wait(self.interval)
+
+        if not self.finished.isSet():
+            self.function(*self.args, **self.kwargs)
+        self.finished.set()
+
+    def reset(self, interval=None):
+        """ Reset the timer """
+        assert self.isAlive
+
+        if interval:
+            self.interval = interval
+        else:
+            pass # Keep interval the same
+
+        self.must_wait = True
+        self.finished.set()
+        self.finished.clear()

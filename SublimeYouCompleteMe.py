@@ -44,6 +44,7 @@ from SublimeYouCompleteMe.plugin.ycmd_keepalive import YCMDKeepAlive
 
 SERVER_IDLE_SUICIDE_SECONDS = 300
 FORCE_NEXT_COMPLETION_SEMANTIC = False
+IDLE_DETECTION_TIMER = None
 
 class SublimeYouCompleteMe(object):
     """ A wrapper for the YCMD server """
@@ -147,6 +148,13 @@ class YCMEventListener(sublime_plugin.EventListener):
             return
         # Note: Maybe we have to add a delay for fast typists with slow cpu's?
         YCMDEventNotification("FileReadyToParse", sublime_view=view)
+
+        global IDLE_DETECTION_TIMER
+        if not IDLE_DETECTION_TIMER or (not IDLE_DETECTION_TIMER.isAlive()):
+            IDLE_DETECTION_TIMER = utils.TimerReset(2.0, sublime_support.update_statusbar, args=[view])
+            IDLE_DETECTION_TIMER.start()
+        else:
+            IDLE_DETECTION_TIMER.reset()
 
     def on_selection_modified(self, view):
         sublime_support.update_statusbar(view)
