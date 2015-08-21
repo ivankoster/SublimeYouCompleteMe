@@ -7,6 +7,9 @@ This plugin is heavily based on [YouCompleteMe](https://github.com/Valloric/YouC
 
 YCMD enables powerfull general autocomplete for every language, and more indepth sementic completion for some, e.g.: python, c, c++
 
+The following preview shows the general autocomplete and displaying of diagnostics in action.
+![alt tag](https://github.com/ivankoster/SublimeYouCompleteMe/blob/master/preview.gif)
+
 SublimeYouCompleteMe is currently in the very early stages of development.
 Currently it is only tested on 64bit windows, with 64bit sublime text 3 and 64bit python 2.7.8.
 
