@@ -31,12 +31,10 @@ Installation for 64bit windows
 
 2.  Use git submodule to download some dependencies
 
+        cd SublimeYouCompleteMe
         git submodule update --init
 
-3.  Now you need YCMD. YCMD is rather annoying to build on windows, but Haroogan has downloadable binaries that we can use.
-4.  Download the x64 package from [vim YCM for windows from Haroogan](https://bitbucket.org/Haroogan/vim-youcompleteme-for-windows).
-5.  Copy the third_party/ycmd/ folder in the above package to your <sublime_packages>/SublimeYouCompleteMe/ycmd folder.
-6.  Last but not least you need libclang.dll. Again I got it from [llvm - Haroogan](https://bitbucket.org/Haroogan/llvm-for-windows). Make sure to get the x64 version.
-7.  Copy the libclang.dll from the above package to <sublime_packages>/SublimeYouCompleteMe/ycmd/libclang.dll.
-8.  Make sure you have a 64bit version of python 2.7 installed. The plugin searches first in the default installation path (C:\\python27\\python.exe) if not found it searches in your PATH environment variable.
-9.  Start Sublime Text 3. It should now work!
+3.  Now you need YCMD and the libclang library. YCMD is rather annoying to build on windows, but there is a precompiled .zip package provided in SublimeYouCompleteMe releases. Check the [latest release](https://github.com/ivankoster/SublimeYouCompleteMe/releases/latest) and download the .zip package.
+4.  Copy the ycmd/ folder in the above package to your <sublime_packages>/SublimeYouCompleteMe/ycmd folder.
+5.  Make sure you have a 64bit version of python 2.7 installed. The plugin searches first in the default installation path (C:\\python27\\python.exe) if not found it searches in your PATH environment variable.
+6.  Start Sublime Text 3. It should now work!
